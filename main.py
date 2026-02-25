@@ -1,8 +1,18 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_absolute_error
 
 # Load dataset
 df = pd.read_csv("study_data.csv")
+
+# New features
+df["Prev_Day_Hours"] = df["Study_Hours"].shift(1)
+df["Rolling_Avg"] = df["Study_Hours"].rolling(window=3).mean()
+
+# Drop NaN rows
+df = df.dropna()
 
 print("Study Data:\n")
 print(df)
@@ -49,17 +59,35 @@ from sklearn.linear_model import LinearRegression
 import numpy as np
 
 # Prepare data
-X = df[["Study_Hours"]]   # input
+X = df[["Study_Hours", "Prev_Day_Hours", "Rolling_Avg"]]   # input
 y = df["Tasks_Completed"] # output
 
 # Train model
 model = LinearRegression()
 model.fit(X, y)
+# Train Decision Tree
+dt_model = DecisionTreeRegressor()
+dt_model.fit(X, y)
+
+# Train Random Forest
+rf_model = RandomForestRegressor()
+rf_model.fit(X, y)
+# Predictions
+lr_pred = model.predict(X)
+dt_pred = dt_model.predict(X)
+rf_pred = rf_model.predict(X)
+
+# Compare errors
+print("\nModel Comparison:")
+print("Linear Regression Error:", mean_absolute_error(y, lr_pred))
+print("Decision Tree Error:", mean_absolute_error(y, dt_pred))
+print("Random Forest Error:", mean_absolute_error(y, rf_pred))
 
 # Predict for new input
-new_hours = pd.DataFrame([[7]], columns=["Study_Hours"])
-prediction = model.predict(new_hours)
+new_data = pd.DataFrame([[7, 6, 5.5]],
+                        columns=["Study_Hours", "Prev_Day_Hours", "Rolling_Avg"])
 
+prediction = model.predict(new_data)
 print("\nPredicted tasks for 7 study hours:", prediction[0])
 import joblib
 
@@ -72,6 +100,7 @@ loaded_model = joblib.load("productivity_model.pkl")
 
 # Predict again using loaded model
 new_hours = pd.DataFrame([[8]], columns=["Study_Hours"])
-prediction = loaded_model.predict(new_hours)
+prediction = model.predict(new_data)
+print("Advanced Prediction:", prediction[0])
 
 print("Prediction using loaded model:", prediction[0])
